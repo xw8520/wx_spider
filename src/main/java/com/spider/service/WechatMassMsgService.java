@@ -1,22 +1,28 @@
 package com.spider.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.gargoylesoftware.htmlunit.HttpMethod;
 import com.gargoylesoftware.htmlunit.WebClient;
+import com.gargoylesoftware.htmlunit.WebRequest;
 import com.gargoylesoftware.htmlunit.html.*;
 import com.spider.model.Discuss;
-import com.spider.model.WxNews;
 import org.apache.commons.io.FileUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
+import org.openqa.selenium.By;
+import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
+import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.chrome.ChromeOptions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.io.*;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -27,38 +33,6 @@ import java.util.UUID;
 @Service("wechatMassMsgService")
 public class WechatMassMsgService {
     Logger logger = LoggerFactory.getLogger(WechatMassMsgService.class);
-
-    //搜狗入口
-    public void getByHtmlUnit(String url, String domain) {
-        if (StringUtils.isEmpty(url)) return;
-        if (domain == null) {
-            //获取域名
-        }
-        if (!url.contains("http")) {
-            url = domain + url;
-        }
-        try (WebClient webClient = new WebClient()) {
-            HtmlPage page = webClient.getPage(url);
-            Thread.sleep(3000);
-            List<HtmlElement> elements = (List<HtmlElement>) page.getByXPath("//ul[@class='news-list']//li//div[@class='txt-box']//h3//a");
-            if (elements != null) {
-                for (HtmlElement item : elements) {
-                    String newsUrl = item.getAttribute("href");
-                    System.out.println(newsUrl);
-                    getNewsFromUrl(newsUrl);
-                }
-            }
-            //翻页
-            HtmlElement next_page = page.getFirstByXPath("//a[@id='sogou_next']");
-            if (next_page != null) {
-                String href = next_page.getAttribute("href");
-//                System.out.println(href);
-                getByHtmlUnit(href, domain);
-            }
-        } catch (Exception ex) {
-            ex.printStackTrace();
-        }
-    }
 
     //获取文章内容
     public void getNewsFromUrl(String url) {
@@ -71,8 +45,6 @@ public class WechatMassMsgService {
             List<Discuss> discusses = new ArrayList<>();
             for (Element el : elements) {
                 //文章内容
-                WxNews wxNews = getWxNewsByElement(el);
-//                评论
                 Discuss discuss = getDiscussByElement(el);
                 if (discuss != null) {
                     Elements tmp = el.getElementsByClass("reply_result");
@@ -90,24 +62,6 @@ public class WechatMassMsgService {
         } catch (Exception ex) {
             ex.printStackTrace();
         }
-    }
-
-    //获取文章信息
-    private WxNews getWxNewsByElement(Element el) {
-        WxNews wxNews = new WxNews();
-        Element tmp = el.getElementById("post-user");
-        if (tmp != null) {
-            wxNews.setPost_user(tmp.html());
-        }
-        Elements elements = el.getElementsByClass("profile_meta_value");
-        if (elements != null) {
-            wxNews.setPost_value(elements.first().html());
-        }
-        tmp = el.getElementById("js_content");
-        if (tmp != null) {
-            wxNews.setContent(tmp.html());
-        }
-        return wxNews;
     }
 
     //获取评价
@@ -172,18 +126,25 @@ public class WechatMassMsgService {
         }
     }
 
-
     public void getByHtmlUnitV2(String url) {
         try (WebClient webClient = new WebClient()) {
-            HtmlPage page = webClient.getPage(url);
-            Thread.sleep(3000);
-            List<HtmlElement> elements = (List<HtmlElement>) page.getByXPath("//ul[@class='news-list']/li");
-            for (HtmlElement el : elements) {
-                HtmlElement a = el.getFirstByXPath("./div[@class='txt-box']/h3/a");
-                if (a != null) {
-                    System.out.println(a.getAttribute("href"));
-                }
-            }
+            WebRequest request = new WebRequest(new URL(url));
+
+//            request.setAdditionalHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8");
+//            request.setAdditionalHeader("Accept-Encoding", "zh-CN,zh;q=0.8");
+//            request.setAdditionalHeader("Cache-Control","max-age=0");
+//            request.setAdditionalHeader("Connection","keep-alive");
+//            request.setAdditionalHeader("Accept-Language", "zh-CN,zh;q=0.8");
+            request.setHttpMethod(HttpMethod.GET);
+            request.setAdditionalHeader("Cookie", "wxtokenkey=a19f40a0b77ad106c03b696b323398c6dda6c83a6ec4d14b967d1092db809609; wxticket=4163818000; wxticketkey=7719cd3a84afc31743bc5dd2c3b7df57dda6c83a6ec4d14b967d1092db809609; wap_sid=CN2K1tYCEkBRUzZTdzZiODZ0X2l5a25VRWpPVzl4ekdFM3NTMHB5aUczOUZfeXdwckVOY0Flb1JTVmtQTHlWSmU0VGVnUWo4GAQg/BEo/KHMuAsw8oKIyAU=; wap_sid2=CN2K1tYCElxCMWg4TUtKeUE2YlZIU2hqQXFLM1NKUk02VEhzbVljNzRIOHBaMFB6VWRKNlZVSTgxWDBCUGhvQ0VJczM3SXlHMGMxR1RKd2ZySWRqSnRlY2dtdGpkWVlEQUFBfjDygojIBQ==");
+            request.setAdditionalHeader("Host","mp.weixin.qq.com");
+            request.setAdditionalHeader("User-Agent","Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36 MicroMessenger/6.5.2.501 NetType/WIFI WindowsWechat QBCore/3.43.373.400 QQBrowser/9.0.2524.400");
+            HtmlPage page = webClient.getPage(request);
+            Thread.sleep(5000);
+
+            String body = page.asXml();
+            File newFile = new File(UUID.randomUUID() + ".html");
+            FileUtils.write(newFile, body, "utf-8");
 
         } catch (Exception ex) {
             ex.printStackTrace();

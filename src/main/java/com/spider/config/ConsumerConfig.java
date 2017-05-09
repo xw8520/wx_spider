@@ -48,14 +48,11 @@ public class ConsumerConfig {
         container.setMaxConcurrentConsumers(1);
         container.setConcurrentConsumers(1);
         container.setAcknowledgeMode(AcknowledgeMode.MANUAL); //设置确认模式手工确认
-        container.setMessageListener(new ChannelAwareMessageListener() {
+        container.setMessageListener((ChannelAwareMessageListener) (message, channel) -> {
+            byte[] body = message.getBody();
+            mqConsumerService.process(new String(body));
 
-            public void onMessage(Message message, com.rabbitmq.client.Channel channel) throws Exception {
-                byte[] body = message.getBody();
-                mqConsumerService.process(new String(body));
-
-                channel.basicAck(message.getMessageProperties().getDeliveryTag(), false); //确认消息成功消费
-            }
+            channel.basicAck(message.getMessageProperties().getDeliveryTag(), false); //确认消息成功消费
         });
         return container;
     }

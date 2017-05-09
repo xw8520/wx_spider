@@ -1,6 +1,13 @@
 package com.spider.config;
 
+import com.spider.service.MqConsumerService;
 import org.springframework.amqp.core.*;
+import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+import org.springframework.amqp.rabbit.core.ChannelAwareMessageListener;
+import org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer;
+import org.springframework.amqp.rabbit.listener.adapter.MessageListenerAdapter;
+import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -10,9 +17,7 @@ import org.springframework.context.annotation.Configuration;
  */
 @Configuration
 public class ConsumerConfig {
-    public static final String WX_QUEUE_NAME = "wx_queue_name_1";
-    public final static String EXCHANGE_NAME = "wx_exchange_1";
-    public final static String ROUTING_KEY = "wx_routingkey_1";
+    public static final String WX_QUEUE_NAME = "wx_news_spider_queue";
     @Value("${rabbitmq.host}")
     String host;
     @Value("${rabbitmq.port}")
@@ -22,18 +27,41 @@ public class ConsumerConfig {
     @Value("${rabbitmq.password}")
     String password;
 
+    /**
+     * 配置消息队列2
+     * 针对消费者配置
+     *
+     * @return
+     */
     @Bean
     public Queue queue() {
-        return new Queue(WX_QUEUE_NAME, true);
+        return new Queue(WX_QUEUE_NAME, false);
+
     }
 
     @Bean
-    public TopicExchange defaultExchange() {
-        return new TopicExchange(EXCHANGE_NAME);
+    public SimpleMessageListenerContainer messageContainer(ConnectionFactory connectionFactory,
+                                                           MqConsumerService mqConsumerService) {
+        SimpleMessageListenerContainer container = new SimpleMessageListenerContainer(connectionFactory);
+        container.setQueues(queue());
+        container.setExposeListenerChannel(true);
+        container.setMaxConcurrentConsumers(1);
+        container.setConcurrentConsumers(1);
+        container.setAcknowledgeMode(AcknowledgeMode.MANUAL); //设置确认模式手工确认
+        container.setMessageListener(new ChannelAwareMessageListener() {
+
+            public void onMessage(Message message, com.rabbitmq.client.Channel channel) throws Exception {
+                byte[] body = message.getBody();
+                mqConsumerService.process(new String(body));
+
+                channel.basicAck(message.getMessageProperties().getDeliveryTag(), false); //确认消息成功消费
+            }
+        });
+        return container;
     }
 
     @Bean
-    public Binding binding() {
-        return BindingBuilder.bind(queue()).to(defaultExchange()).with(ROUTING_KEY);
+    MessageListenerAdapter messageListenerAdapter() {
+        return new MessageListenerAdapter();
     }
 }

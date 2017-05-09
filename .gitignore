@@ -27,3 +27,4 @@ nbdist/
 target/
 .idea/
 .mvn/
+node_modules/

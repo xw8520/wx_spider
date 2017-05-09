@@ -1,18 +1,14 @@
 package com.spider.service;
 
-import com.spider.config.ConsumerConfig;
-import org.springframework.amqp.rabbit.annotation.*;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 /**
  * Created by wq on 2017/5/8.
  */
-@Component
-@RabbitListener(queues = ConsumerConfig.WX_QUEUE_NAME)
+@Service
 public class MqConsumerService {
 
-    @RabbitHandler
     public void process(String msg) {
-        System.out.println("Receiver : " + msg);
+        System.out.println(msg);
     }
 }

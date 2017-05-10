@@ -16,14 +16,14 @@ public class NewsMessage implements Serializable {
     private long id;
     private String title;
     private String sum;
-    private Date postdata;
+    private String sn;
+    private Date postdate;
     private Date createdate;
     private String nameen;
     private String namecn;
     private String cover;
     private String filename;
-    private int view;
-    private int praise;
+    private String views;
     private String comment;
     private String mainbody;
 
@@ -33,6 +33,14 @@ public class NewsMessage implements Serializable {
 
     public void setId(long id) {
         this.id = id;
+    }
+
+    public String getSn() {
+        return sn;
+    }
+
+    public void setSn(String sn) {
+        this.sn = sn;
     }
 
     public String getTitle() {
@@ -51,12 +59,12 @@ public class NewsMessage implements Serializable {
         this.sum = sum;
     }
 
-    public Date getPostdata() {
-        return postdata;
+    public Date getPostdate() {
+        return postdate;
     }
 
-    public void setPostdata(Date postdata) {
-        this.postdata = postdata;
+    public void setPostdate(Date postdate) {
+        this.postdate = postdate;
     }
 
     public Date getCreatedate() {
@@ -99,20 +107,12 @@ public class NewsMessage implements Serializable {
         this.filename = filename;
     }
 
-    public int getView() {
-        return view;
+    public String getViews() {
+        return views;
     }
 
-    public void setView(int view) {
-        this.view = view;
-    }
-
-    public int getPraise() {
-        return praise;
-    }
-
-    public void setPraise(int praise) {
-        this.praise = praise;
+    public void setViews(String views) {
+        this.views = views;
     }
 
     public String getComment() {

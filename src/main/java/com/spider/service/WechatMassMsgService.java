@@ -3,6 +3,8 @@ package com.spider.service;
 import com.spider.domain.NewsMessage;
 import com.spider.repo.NewsMessageRepo;
 import com.spider.utils.EncryptUtils;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.joda.time.LocalDate;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -12,9 +14,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import javax.annotation.Resource;
+import java.io.File;
+import java.io.InputStream;
+import java.net.URL;
 import java.util.Date;
+import java.util.List;
+import java.util.UUID;
 
 
 /**
@@ -28,6 +36,8 @@ public class WechatMassMsgService {
     public void parseAndSave(String sn, String source) {
         NewsMessage news = new NewsMessage();
         Document document = Jsoup.parse(source);
+        //保存图片到本地
+        document = saveImage(document);
         Element postDate = document.getElementById("post-date");
         Element postUser = document.getElementById("post-user");
         Elements metaValue = document.getElementsByClass("profile_meta_value");
@@ -50,6 +60,41 @@ public class WechatMassMsgService {
         news.setSn(sn);
         news.setCreatedate(new Date());
         newsMessageRepo.save(news);
+    }
+
+    public Document saveImage(Document document) {
+        List<Element> innerImg = document.getElementsByTag("img");
+        if (innerImg != null) {
+            for (Element img : innerImg) {
+                try {
+                    String imgUrl = img.attr("data-src");
+                    if (StringUtils.isEmpty(imgUrl)) {
+                        imgUrl = img.attr("src");
+                        if (StringUtils.isEmpty(imgUrl)) continue;
+                        if (imgUrl.contains("javascript")) continue;
+                    }
+                    if (!imgUrl.contains("http")) {
+                        imgUrl = "https:" + imgUrl;
+                    }
+                    if (imgUrl.contains("icon_loading_white2805ea.gif")) {
+                        continue;
+                    }
+                    System.out.println(imgUrl);
+                    InputStream in = new URL(imgUrl).openStream();
+                    String suffix = imgUrl.contains("wx_fmt=gif") ? ".gif" : ".png";
+                    byte[] buffer = IOUtils.toByteArray(in);
+                    String newImgName = UUID.randomUUID() + suffix;
+                    FileUtils.writeByteArrayToFile(new File(newImgName), buffer);
+                    IOUtils.closeQuietly(in);
+                    img.removeAttr("data-src");
+                    img.attr("src", newImgName);
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            }
+        }
+
+        return document;
     }
 
     @Transactional

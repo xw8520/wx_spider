@@ -58,6 +58,7 @@ public class WechatMassMsgService {
             news.setSum(EncryptUtils.md5(titleStr));
         }
         news.setSn(sn);
+        news.setMainbody(document.html());
         news.setCreatedate(new Date());
         newsMessageRepo.save(news);
     }

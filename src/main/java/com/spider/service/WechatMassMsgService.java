@@ -12,14 +12,17 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.Base64Utils;
 import org.springframework.util.StringUtils;
 
 import javax.annotation.Resource;
 import java.io.File;
 import java.io.InputStream;
 import java.net.URL;
+import java.nio.charset.Charset;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
@@ -32,8 +35,14 @@ import java.util.UUID;
 public class WechatMassMsgService {
     @Resource
     private NewsMessageRepo newsMessageRepo;
+    @Value("${file.path}")
+    String basePath;
 
     public void parseAndSave(String sn, String source) {
+        parseAndSave(sn, source, "");
+    }
+
+    public void parseAndSave(String sn, String source, String cover) {
         NewsMessage news = new NewsMessage();
         Document document = Jsoup.parse(source);
         //保存图片到本地
@@ -58,8 +67,12 @@ public class WechatMassMsgService {
             news.setSum(EncryptUtils.md5(titleStr));
         }
         news.setSn(sn);
-        news.setMainbody(document.html());
+
+        String html = document.html();
+        html = Base64Utils.encodeToString(html.getBytes(Charset.forName("utf-8")));
+        news.setMainbody(html);
         news.setCreatedate(new Date());
+        news.setCover(cover);
         newsMessageRepo.save(news);
     }
 
@@ -84,8 +97,12 @@ public class WechatMassMsgService {
                     InputStream in = new URL(imgUrl).openStream();
                     String suffix = imgUrl.contains("wx_fmt=gif") ? ".gif" : ".png";
                     byte[] buffer = IOUtils.toByteArray(in);
+                    File pathFile = new File(basePath);
+                    if (!pathFile.exists()) {
+                        pathFile.mkdir();
+                    }
                     String newImgName = UUID.randomUUID() + suffix;
-                    FileUtils.writeByteArrayToFile(new File(newImgName), buffer);
+                    FileUtils.writeByteArrayToFile(new File(basePath + File.separator + newImgName), buffer);
                     IOUtils.closeQuietly(in);
                     img.removeAttr("data-src");
                     img.attr("src", newImgName);

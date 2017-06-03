@@ -1,15 +1,19 @@
 package com.spider.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.spider.utils.ChromeDriverUtils;
+import com.spider.utils.JsonUtils;
 import com.spider.utils.UrlUtils;
 import org.apache.commons.io.IOUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import javax.annotation.Resource;
 import java.io.*;
 import java.nio.charset.Charset;
 import java.util.List;
@@ -29,6 +33,8 @@ public class WechatAutoService {
     public final static String IDX = "idx";
     public final static String WXTOKEN = "wxtoken";
     public final static String jsonBaseUrl = "https://mp.weixin.qq.com/mp/profile_ext?action=getmsg&__biz=%s&f=json&frommsgid=%s&count=10&scene=124&is_ok=1&uin=%s&key=%s&pass_ticket=%s&wxtoken=&x5=0&f=json";
+    @Resource
+    WechatMassMsgService wechatMassMsgService;
 
     public void autoCrawl() {
 
@@ -53,17 +59,18 @@ public class WechatAutoService {
         try {
             ChromeDriver driver = ChromeDriverUtils.getChromeDriver();
             driver.get(url);
-            Thread.sleep(5000);
+            Thread.sleep(3000);
             String source = driver.getPageSource();
             Document document = Jsoup.parse(source);
-            Elements elements = document.getElementsByClass("weui_msg_card");
+            Elements elements = document.getElementsByClass("weui_media_box appmsg");
             if (elements == null || elements.isEmpty()) return;
 
-            String fromId = "";
+            getPageContentBatch(elements);
 
+            String fromId = getFrommsgid(elements);
             Map<String, String> param = UrlUtils.parseUrl(url);
             if (!param.containsKey(BIZ)) return;
-            String biz = param.get(BIZ);
+            String biz = param.get(BIZ) + "==";
             if (!param.containsKey(UIN)) return;
             String uin = param.get(UIN);
             if (!param.containsKey(KEY)) return;
@@ -77,7 +84,66 @@ public class WechatAutoService {
         }
     }
 
+    public String getFrommsgid(Elements elements) {
+        int len = elements.size();
+        Element element = elements.get(len - 1);
+        return element.attr("msgid");
+    }
+
+    public void getPageContentBatch(Elements elements) {
+
+    }
+
+    public void getPageContent(String url) {
+
+    }
+
+    public void getPageContent(String url, String cover) {
+
+    }
+
     public void getJson(String url) {
+        ChromeDriver driver = ChromeDriverUtils.getChromeDriver();
+        driver.get(url);
+        try {
+            Thread.sleep(3000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        String source = driver.getPageSource();
+        Document document = Jsoup.parse(source);
+        Elements pre = document.getElementsByTag("pre");
+        if (pre == null) return;
+        String json = pre.get(0).html();
+        JsonNode root = JsonUtils.readToNode(json);
+        JsonNode generalMsgList = root.get("general_msg_list");
+        if (generalMsgList == null) return;
+        JsonNode jsonRoot = JsonUtils.readToNode(generalMsgList.textValue());
+        if (jsonRoot == null) return;
+        JsonNode list = jsonRoot.get("list");
+        if (list == null) return;
+        int size = list.size();
+        for (int i = 0; i < size; i++) {
+            JsonNode f = list.get(i);
+            JsonNode appMsgExtInfo = f.get("app_msg_ext_info");
+
+            if (appMsgExtInfo != null) {
+                getNewsFromJson(appMsgExtInfo);
+
+                JsonNode multiMsgList = appMsgExtInfo.get("multi_app_msg_item_list");
+                if (multiMsgList != null) {
+                    for (int j = 0, len = multiMsgList.size(); j < len; j++) {
+                        getNewsFromJson(multiMsgList.get(j));
+                    }
+                }
+            }
+
+        }
+
+
+    }
+
+    public void getNewsFromJson(JsonNode jsonNode) {
 
     }
 }

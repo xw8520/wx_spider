@@ -64,9 +64,6 @@ public class WechatAutoService {
             Document document = Jsoup.parse(source);
             Elements elements = document.getElementsByClass("weui_media_box appmsg");
             if (elements == null || elements.isEmpty()) return;
-
-            getPageContentBatch(elements);
-
             String fromId = getFrommsgid(elements);
             Map<String, String> param = UrlUtils.parseUrl(url);
             if (!param.containsKey(BIZ)) return;
@@ -91,15 +88,29 @@ public class WechatAutoService {
     }
 
     public void getPageContentBatch(Elements elements) {
-
+        for (Element element : elements) {
+            Elements tmp = element.getElementsByTag("span");
+            if (tmp == null) continue;
+            getPageContent(tmp.get(0).attr("hrefs"));
+        }
     }
 
     public void getPageContent(String url) {
+        if (StringUtils.isEmpty(url)) return;
 
-    }
+        try {
+            ChromeDriver driver = ChromeDriverUtils.getChromeDriver();
+            driver.get(url);
+            Thread.sleep(3000);
+            Map<String, String> params = UrlUtils.parseUrl(url);
+            if (params.containsKey("sn")) {
+                String source = driver.getPageSource();
+                wechatMassMsgService.parseAndSave(params.get("sn"), source);
+            }
 
-    public void getPageContent(String url, String cover) {
-
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     public void getJson(String url) {
@@ -144,6 +155,17 @@ public class WechatAutoService {
     }
 
     public void getNewsFromJson(JsonNode jsonNode) {
-
+        JsonNode title = jsonNode.get("title");
+        if (title != null) {
+            System.out.println(title.textValue());
+        }
+        JsonNode contentUrl = jsonNode.get("content_url");
+        if (contentUrl != null) {
+            System.out.println(contentUrl.textValue().replace("amp;", ""));
+        }
+        JsonNode cover = jsonNode.get("cover");
+        if (cover != null) {
+            System.out.println(cover.textValue().replace("amp;", ""));
+        }
     }
 }

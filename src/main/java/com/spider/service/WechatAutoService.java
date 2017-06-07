@@ -65,16 +65,10 @@ public class WechatAutoService {
             Elements elements = document.getElementsByClass("weui_media_box appmsg");
             if (elements == null || elements.isEmpty()) return;
             String fromId = getFrommsgid(elements);
-            Map<String, String> param = UrlUtils.parseUrl(url);
-            if (!param.containsKey(BIZ)) return;
-            String biz = param.get(BIZ) + "==";
-            if (!param.containsKey(UIN)) return;
-            String uin = param.get(UIN);
-            if (!param.containsKey(KEY)) return;
-            String key = param.get(KEY);
-            if (!param.containsKey(PASS_TICKET)) return;
-            String passTicket = param.get(PASS_TICKET);
-            String jsonUrl = String.format(jsonBaseUrl, biz, fromId, uin, key, passTicket);
+            //爬取第一页
+            getPageContentBatch(elements);
+            //爬取下一页json
+            String jsonUrl = getJsonUrl(url, fromId);
             getJson(jsonUrl);
         } catch (InterruptedException e) {
             e.printStackTrace();
@@ -113,6 +107,20 @@ public class WechatAutoService {
         }
     }
 
+    public String getJsonUrl(String beforeUrl, String fromId) {
+        Map<String, String> param = UrlUtils.parseUrl(beforeUrl);
+        if (!param.containsKey(BIZ)) return "";
+        String biz = param.get(BIZ) + "==";
+        if (!param.containsKey(UIN)) return "";
+        String uin = param.get(UIN);
+        if (!param.containsKey(KEY)) return "";
+        String key = param.get(KEY);
+        if (!param.containsKey(PASS_TICKET)) return "";
+        String passTicket = param.get(PASS_TICKET);
+        String jsonUrl = String.format(jsonBaseUrl, biz, fromId, uin, key, passTicket);
+        return jsonUrl;
+    }
+
     public void getJson(String url) {
         ChromeDriver driver = ChromeDriverUtils.getChromeDriver();
         driver.get(url);
@@ -148,10 +156,16 @@ public class WechatAutoService {
                     }
                 }
             }
-
+            //读取下一页json数据
+            if (i == size - 1) {
+                Map<String, String> map = UrlUtils.parseUrl(url);
+                if (map.containsKey("frommsgid")) {
+                    String fromId = map.get("frommsgid");
+                    String newUrl = getJsonUrl(url, String.valueOf(Integer.parseInt(fromId) - 10));
+                    getJson(newUrl);
+                }
+            }
         }
-
-
     }
 
     public void getNewsFromJson(JsonNode jsonNode) {

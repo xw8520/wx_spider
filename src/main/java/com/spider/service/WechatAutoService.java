@@ -18,6 +18,8 @@ import java.io.*;
 import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * Created by wq on 2017/5/27.
@@ -85,11 +87,17 @@ public class WechatAutoService {
         for (Element element : elements) {
             Elements tmp = element.getElementsByTag("span");
             if (tmp == null) continue;
-            getPageContent(tmp.get(0).attr("hrefs"));
+            String imgUrl = tmp.get(0).attr("style");
+            Pattern pattern = Pattern.compile("(?<=\\()[^\\)]+");
+            Matcher matcher = pattern.matcher(imgUrl);
+            while (matcher.find()) {
+                imgUrl = matcher.group();
+            }
+            getPageContent(tmp.get(0).attr("hrefs"), imgUrl);
         }
     }
 
-    public void getPageContent(String url) {
+    public void getPageContent(String url, String cover) {
         if (StringUtils.isEmpty(url)) return;
 
         try {
@@ -99,7 +107,7 @@ public class WechatAutoService {
             Map<String, String> params = UrlUtils.parseUrl(url);
             if (params.containsKey("sn")) {
                 String source = driver.getPageSource();
-                wechatMassMsgService.parseAndSave(params.get("sn"), source);
+                wechatMassMsgService.parseAndSave(params.get("sn"), source, cover);
             }
 
         } catch (InterruptedException e) {

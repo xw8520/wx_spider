@@ -4,20 +4,30 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.spider.utils.ChromeDriverUtils;
 import com.spider.utils.JsonUtils;
 import com.spider.utils.UrlUtils;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.http.Header;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.util.EntityUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.openqa.selenium.chrome.ChromeDriver;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import javax.annotation.Resource;
 import java.io.*;
+import java.net.URL;
 import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -37,6 +47,8 @@ public class WechatAutoService {
     public final static String jsonBaseUrl = "https://mp.weixin.qq.com/mp/profile_ext?action=getmsg&__biz=%s&f=json&frommsgid=%s&count=10&scene=124&is_ok=1&uin=%s&key=%s&pass_ticket=%s&wxtoken=&x5=0&f=json";
     @Resource
     WechatMassMsgService wechatMassMsgService;
+    @Value("${file.path}")
+    String basePath;
 
     public void autoCrawl() {
 
@@ -189,5 +201,68 @@ public class WechatAutoService {
         if (cover != null) {
             System.out.println(cover.textValue().replace("amp;", ""));
         }
+    }
+
+    public String getVoice(Document document) {
+        Elements el = document.getElementsByTag("mpvoice");
+        if (!el.isEmpty()) {
+            Element voice = el.get(0);
+            String mediaId = voice.attr("voice_encode_fileid");
+            String url = "https://res.wx.qq.com/voice/getvoice?mediaid=" + mediaId;
+            HttpClient client = HttpClients.createDefault();
+            HttpGet get = new HttpGet(url);
+            try {
+                String contentType = "mp3";
+                HttpResponse resp = client.execute(get);
+                Header[] headers = resp.getHeaders("Content-Type");
+                if (headers != null && headers.length > 0) {
+                    contentType = headers[0].getValue().replace("audio\\/", "");
+                } else {
+                    System.out.println("header is empty");
+                }
+
+                byte[] buffer = EntityUtils.toByteArray(resp.getEntity());
+                File newFile = new File(basePath + UUID.randomUUID() + "." + contentType);
+                FileUtils.writeByteArrayToFile(newFile, buffer);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return "";
+    }
+
+    public Document saveImage(Document document) {
+
+        List<Element> innerImg = document.getElementsByTag("img");
+        if (innerImg != null) {
+            for (Element img : innerImg) {
+                try {
+                    String imgUrl = img.attr("data-src");
+                    if (StringUtils.isEmpty(imgUrl)) {
+                        imgUrl = img.attr("src");
+                        if (StringUtils.isEmpty(imgUrl)) continue;
+                        if (imgUrl.contains("javascript")) continue;
+                    }
+                    if (!imgUrl.contains("http")) {
+                        imgUrl = "https:" + imgUrl;
+                    }
+                    if (imgUrl.contains("icon_loading_white2805ea.gif")) {
+                        continue;
+                    }
+//                    System.out.println(imgUrl);
+                    InputStream in = new URL(imgUrl).openStream();
+                    String suffix = imgUrl.contains("wx_fmt=gif") ? ".gif" : ".png";
+                    byte[] buffer = IOUtils.toByteArray(in);
+                    String newImgName = UUID.randomUUID() + suffix;
+                    FileUtils.writeByteArrayToFile(new File(basePath + newImgName), buffer);
+                    IOUtils.closeQuietly(in);
+                    img.removeAttr("data-src");
+                    img.attr("src", newImgName);
+                } catch (Exception ex) {
+                }
+            }
+        }
+
+        return document;
     }
 }

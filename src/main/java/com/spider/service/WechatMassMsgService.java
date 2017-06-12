@@ -38,11 +38,11 @@ public class WechatMassMsgService {
     @Value("${file.path}")
     String basePath;
 
-    public void parseAndSave(String sn, String source) {
-        parseAndSave(sn, source, "");
+    public void parseAndSave(String source) {
+        parseAndSave(source, "");
     }
 
-    public void parseAndSave(String sn, String source, String cover) {
+    public void parseAndSave(String source, String cover) {
         NewsMessage news = new NewsMessage();
         Document document = Jsoup.parse(source);
         //保存图片到本地
@@ -64,9 +64,10 @@ public class WechatMassMsgService {
         if (title != null) {
             String titleStr = title.html();
             news.setTitle(titleStr);
-            news.setSum(EncryptUtils.md5(titleStr));
+            //使用title+nameen作为文章标识
+            news.setSum(EncryptUtils.md5(titleStr+news.getNameen()));
         }
-        news.setSn(sn);
+        news.setSn("");
 
         String html = document.html();
         html = Base64Utils.encodeToString(html.getBytes(Charset.forName("utf-8")));

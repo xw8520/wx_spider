@@ -119,7 +119,7 @@ public class WechatAutoService {
             Map<String, String> params = UrlUtils.parseUrl(url);
             if (params.containsKey("sn")) {
                 String source = driver.getPageSource();
-                wechatMassMsgService.parseAndSave(params.get("sn"), source, cover);
+                wechatMassMsgService.parseAndSave(source, cover);
             }
 
         } catch (InterruptedException e) {

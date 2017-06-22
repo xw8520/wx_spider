@@ -39,10 +39,11 @@ public class WechatMassMsgService {
     String basePath;
 
     public void parseAndSave(String source) {
-        parseAndSave(source, "");
+        parseAndSave(source, "","");
     }
 
-    public void parseAndSave(String source, String cover) {
+
+    public void parseAndSave(String source, String cover,String sn) {
         NewsMessage news = new NewsMessage();
         Document document = Jsoup.parse(source);
         //保存图片到本地
@@ -65,7 +66,7 @@ public class WechatMassMsgService {
             String titleStr = title.html();
             news.setTitle(titleStr);
             //使用title+nameen作为文章标识
-            news.setSum(EncryptUtils.md5(titleStr+news.getNameen()));
+            news.setSum(EncryptUtils.md5(titleStr + news.getNameen()));
         }
         news.setSn("");
 
@@ -74,6 +75,7 @@ public class WechatMassMsgService {
         news.setMainbody(html);
         news.setCreatedate(new Date());
         news.setCover(cover);
+        news.setSn(sn);
         newsMessageRepo.save(news);
     }
 

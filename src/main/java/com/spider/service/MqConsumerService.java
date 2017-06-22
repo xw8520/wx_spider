@@ -32,7 +32,7 @@ public class MqConsumerService {
             }
             String sn = UrlUtils.parseUrl(newsInfo.getUrl()).get("sn");
             if (newsInfo.getType() == 0) {
-                wechatMassMsgService.parseAndSave(sn, newsInfo.getBody());
+                wechatMassMsgService.parseAndSave(newsInfo.getBody(),"",sn);
             }
             if (newsInfo.getType() == 1) {
                 wechatMassMsgService.updateViews(sn, newsInfo.getBody());

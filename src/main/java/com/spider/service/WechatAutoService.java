@@ -119,7 +119,7 @@ public class WechatAutoService {
             Map<String, String> params = UrlUtils.parseUrl(url);
             if (params.containsKey("sn")) {
                 String source = driver.getPageSource();
-                wechatMassMsgService.parseAndSave(source, cover);
+                wechatMassMsgService.parseAndSave(source, cover,params.get("sn"));
             }
 
         } catch (InterruptedException e) {
@@ -189,17 +189,17 @@ public class WechatAutoService {
     }
 
     public void getNewsFromJson(JsonNode jsonNode) {
-        JsonNode title = jsonNode.get("title");
-        if (title != null) {
-            System.out.println(title.textValue());
+        String title="";
+        String url="";
+        String cover="";
+        JsonNode urlNode = jsonNode.get("content_url");
+        if (urlNode != null) {
+            url=urlNode.textValue().replace("amp;", "");
         }
-        JsonNode contentUrl = jsonNode.get("content_url");
-        if (contentUrl != null) {
-            System.out.println(contentUrl.textValue().replace("amp;", ""));
+        JsonNode coverNode = jsonNode.get("cover");
+        if (coverNode != null) {
+            cover=coverNode.textValue().replace("amp;", "");
         }
-        JsonNode cover = jsonNode.get("cover");
-        if (cover != null) {
-            System.out.println(cover.textValue().replace("amp;", ""));
-        }
+        getPageContent(url,cover);
     }
 }

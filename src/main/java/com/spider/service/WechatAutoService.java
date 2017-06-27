@@ -78,7 +78,7 @@ public class WechatAutoService {
             Document document = Jsoup.parse(source);
             Elements elements = document.getElementsByClass("weui_media_box appmsg");
             if (elements == null || elements.isEmpty()) return;
-            String fromId = getFrommsgid(elements);
+            String fromId = getFrommsgid(document);
             //爬取第一页
             getPageContentBatch(elements);
             //爬取下一页json
@@ -89,10 +89,14 @@ public class WechatAutoService {
         }
     }
 
-    public String getFrommsgid(Elements elements) {
-        int len = elements.size();
-        Element element = elements.get(len - 1);
-        return element.attr("msgid");
+    public String getFrommsgid(Document document) {
+        Elements jsCard = document.getElementsByClass("weui_msg_card js_card");
+        if (jsCard != null && !jsCard.isEmpty()) {
+            Element msgIdEl = jsCard.get(jsCard.size() - 1);
+            return msgIdEl.attr("msgid");
+        }
+
+        return "";
     }
 
     public void getPageContentBatch(Elements elements) {

@@ -183,8 +183,8 @@ public class WechatAutoService {
             //读取下一页json数据
             if (i == size - 1) {
                 Map<String, String> map = UrlUtils.parseUrl(url);
-                if (map.containsKey("frommsgid")) {
-                    String fromId = map.get("frommsgid");
+                if (map.containsKey(FROMMSGID)) {
+                    String fromId = map.get(FROMMSGID);
                     String newUrl = getJsonUrl(url, String.valueOf(Integer.parseInt(fromId) - 10));
                     getJson(newUrl);
                 }

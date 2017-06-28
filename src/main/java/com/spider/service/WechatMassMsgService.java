@@ -5,6 +5,11 @@ import com.spider.repo.NewsMessageRepo;
 import com.spider.utils.EncryptUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.util.EntityUtils;
 import org.joda.time.LocalDate;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
@@ -20,6 +25,7 @@ import org.springframework.util.StringUtils;
 
 import javax.annotation.Resource;
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.nio.charset.Charset;
@@ -39,15 +45,18 @@ public class WechatMassMsgService {
     String basePath;
 
     public void parseAndSave(String source) {
-        parseAndSave(source, "","");
+        parseAndSave(source, "", "");
     }
 
 
-    public void parseAndSave(String source, String cover,String sn) {
+    public void parseAndSave(String source, String cover, String sn) {
         NewsMessage news = new NewsMessage();
         Document document = Jsoup.parse(source);
         //保存图片到本地
         document = saveImage(document);
+        //保存语音
+        document = getVoice(document);
+        
         Element postDate = document.getElementById("post-date");
         Element postUser = document.getElementById("post-user");
         Elements metaValue = document.getElementsByClass("profile_meta_value");
@@ -115,6 +124,28 @@ public class WechatMassMsgService {
             }
         }
 
+        return document;
+    }
+
+    private Document getVoice(Document document) {
+        Elements el = document.getElementsByTag("mpvoice");
+        if (!el.isEmpty()) {
+            Element voice = el.get(0);
+            String mediaId = voice.attr("voice_encode_fileid");
+            String url = "https://res.wx.qq.com/voice/getvoice?mediaid=" + mediaId;
+            HttpClient client = HttpClients.createDefault();
+            HttpGet get = new HttpGet(url);
+            try {
+                String fileName = UUID.randomUUID() + ".mp3";
+
+                HttpResponse resp = client.execute(get);
+                byte[] buffer = EntityUtils.toByteArray(resp.getEntity());
+                File newFile = new File(basePath + fileName);
+                FileUtils.writeByteArrayToFile(newFile, buffer);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
         return document;
     }
 

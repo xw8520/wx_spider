@@ -56,7 +56,6 @@ public class WechatMassMsgService {
         document = saveImage(document);
         //保存语音
         document = getVoice(document);
-        
         Element postDate = document.getElementById("post-date");
         Element postUser = document.getElementById("post-user");
         Elements metaValue = document.getElementsByClass("profile_meta_value");

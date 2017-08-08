@@ -14,7 +14,8 @@ public class UrlUtils {
      */
     public static Map<String, String> parseUrl(String url) {
         Map<String, String> mapRequest = new HashMap<>();
-
+        int index = url.indexOf("?");
+        url = url.substring(index + 1, url.length());
         String[] arrSplit = url.split("[&]");
         for (String strSplit : arrSplit) {
             String[] arrSplitEqual = null;

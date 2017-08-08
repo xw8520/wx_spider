@@ -123,7 +123,7 @@ public class WechatAutoService {
             Map<String, String> params = UrlUtils.parseUrl(url);
             if (params.containsKey("sn")) {
                 String source = driver.getPageSource();
-                wechatMassMsgService.parseAndSave(source, cover,params.get("sn"));
+                wechatMassMsgService.parseAndSave(source, cover, params.get("sn"));
             }
 
         } catch (InterruptedException e) {
@@ -159,6 +159,11 @@ public class WechatAutoService {
         if (pre == null) return;
         String json = pre.get(0).html();
         JsonNode root = JsonUtils.readToNode(json);
+        JsonNode canContinue = root.get("can_msg_continue");
+        boolean finished = false;
+        if (canContinue != null) {
+            finished = canContinue.intValue() == 0;
+        }
         JsonNode generalMsgList = root.get("general_msg_list");
         if (generalMsgList == null) return;
         JsonNode jsonRoot = JsonUtils.readToNode(generalMsgList.textValue());
@@ -180,6 +185,7 @@ public class WechatAutoService {
                     }
                 }
             }
+            if (finished) return;
             //读取下一页json数据
             if (i == size - 1) {
                 Map<String, String> map = UrlUtils.parseUrl(url);
@@ -193,17 +199,17 @@ public class WechatAutoService {
     }
 
     public void getNewsFromJson(JsonNode jsonNode) {
-        String title="";
-        String url="";
-        String cover="";
+        String title = "";
+        String url = "";
+        String cover = "";
         JsonNode urlNode = jsonNode.get("content_url");
         if (urlNode != null) {
-            url=urlNode.textValue().replace("amp;", "");
+            url = urlNode.textValue().replace("amp;", "");
         }
         JsonNode coverNode = jsonNode.get("cover");
         if (coverNode != null) {
-            cover=coverNode.textValue().replace("amp;", "");
+            cover = coverNode.textValue().replace("amp;", "");
         }
-        getPageContent(url,cover);
+        getPageContent(url, cover);
     }
 }
